@@ -1,12 +1,13 @@
-#work well with time counter - best ver
 import sys
 import pyaudio
 import wave
 import threading
 import time
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QComboBox, QLabel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QComboBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt5.QtCore import QTimer
-
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 class AudioRecorder(QMainWindow):
     def __init__(self):
@@ -24,19 +25,41 @@ class AudioRecorder(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setGeometry(100, 100, 300, 200)
-        self.setWindowTitle('Audio Recorder')
+        self.setWindowTitle("Audio Plot")
+        self.setGeometry(100, 100, 1000, 600)
 
-        self.device_combo = QComboBox(self)
-        self.device_combo.setGeometry(50, 30, 200, 30)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QHBoxLayout(central_widget)
+
+        # Main window layout
+        main_window_layout = QVBoxLayout()
+        self.device_combo = QComboBox()
         self.populate_input_devices()
-
-        self.label_timer = QLabel(f' Recording: 00:00:00', self)
-        self.label_timer.setGeometry(50, 70, 200, 30)
-
+        main_window_layout.addWidget(self.device_combo)
+        self.label_timer = QLabel(f'Recording: 00:00:00', self)
+        main_window_layout.addWidget(self.label_timer)
         self.button = QPushButton('Start Recording', self)
-        self.button.setGeometry(50, 110, 200, 30)
         self.button.clicked.connect(self.toggle_recording)
+        main_window_layout.addWidget(self.button)
+        main_window_layout.addStretch(1)
+
+        # Plot window layout
+        plot_widget = QWidget()
+        plot_layout = QVBoxLayout(plot_widget)
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        self.ax.set_title("Audio Signal (FFT)")
+        self.lines = self.ax.plot([], color=(0, 1, 0.29))
+        self.ax.set_facecolor((0, 0, 0))
+        self.ax.set_xlabel('Frequency (Hz)')
+        self.ax.set_ylabel('Amplitude')
+        self.ax.set_ylim(-32768, 32768)  # Adjust amplitude range as needed
+        self.ax.yaxis.grid(True)
+        self.canvas = FigureCanvas(self.fig)
+        plot_layout.addWidget(self.canvas)
+
+        main_layout.addLayout(main_window_layout)
+        main_layout.addWidget(plot_widget)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
@@ -78,6 +101,11 @@ class AudioRecorder(QMainWindow):
         self.stream.stop_stream()
         self.stream.close()
         self.audio.terminate()
+        self.lines[0].set_data([], [])  # Clear plot data
+        self.canvas.draw()  # Redraw canvas
+        print("Stopping recording...")
+        self.closing = False  # Reset closing flag
+        print("Closing flag reset to False")
 
     def record(self, device_index):
         self.stream = self.audio.open(format=self.FORMAT,
@@ -90,8 +118,17 @@ class AudioRecorder(QMainWindow):
         while self.recording:
             data = self.stream.read(self.CHUNK)
             frames.append(data)
+            # Plotting the live audio signal
+            audio_data = np.frombuffer(data, dtype=np.int16)
+            frequency = np.fft.fftfreq(len(audio_data), 1/self.RATE)
+            magnitude = np.abs(np.fft.fft(audio_data))
+            self.lines[0].set_data(frequency, magnitude)
+            self.ax.relim()
+            self.ax.autoscale_view()
+            self.canvas.draw()
             # Check if window is closing while recording
             if self.closing:
+                print("collapsed")
                 break
         self.save_recording(frames)
 
@@ -111,16 +148,13 @@ class AudioRecorder(QMainWindow):
         hours = int(elapsed_time // 3600)
         minutes = int((elapsed_time % 3600) // 60)
         seconds = int(elapsed_time % 60)
-        return f' Recording: {hours:02d}:{minutes:02d}:{seconds:02d}'
+        return f'Recording: {hours:02d}:{minutes:02d}:{seconds:02d}'
 
     def closeEvent(self, event):
-        # Ignore the close event and hide the window if recording
-        if self.recording:
-            event.ignore()  # Ignore the close event
-            self.hide()  # Hide the window instead
-            self.closing = True  # Set closing flag
-        else:
-            event.accept()
+        # Ignore the close event and hide the window
+        event.ignore()
+        self.hide()
+        self.closing = False
 
 
 if __name__ == '__main__':
