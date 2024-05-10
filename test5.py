@@ -1,3 +1,4 @@
+#keep this ver, loop recording, time runner, +-1sec
 import sys
 import pyaudio
 import wave
@@ -14,14 +15,14 @@ class AudioRecorder(QMainWindow):
         super().__init__()
 
         self.recording = False
-        self.closing = False  # Flag to indicate if window is closing
+        #self.closing = False  # Flag to indicate if window is closing
         self.audio = pyaudio.PyAudio()
         self.CHUNK = 1024
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 2
         self.RATE = 44100
         self.start_time = 0
-
+        self.stream = None
         self.initUI()
 
     def initUI(self):
@@ -84,6 +85,9 @@ class AudioRecorder(QMainWindow):
             self.stop_recording()
 
     def start_recording(self):
+        if self.stream is not None:
+            self.stream.stop_stream()
+            self.stream.close()
         self.recording = True
         self.button.setText('Stop Recording')
         device_index = self.device_combo.currentData()
@@ -98,14 +102,15 @@ class AudioRecorder(QMainWindow):
         elapsed_time = time.time() - self.start_time
         self.label_timer.setText(self.format_time(elapsed_time))
         device_index = self.device_combo.currentData()
-        self.stream.stop_stream()
+        """ self.stream.stop_stream()
         self.stream.close()
-        self.audio.terminate()
+        self.audio.terminate() """
         self.lines[0].set_data([], [])  # Clear plot data
         self.canvas.draw()  # Redraw canvas
+        """    
         print("Stopping recording...")
         self.closing = False  # Reset closing flag
-        print("Closing flag reset to False")
+        print("Closing flag reset to False")"""
 
     def record(self, device_index):
         self.stream = self.audio.open(format=self.FORMAT,
@@ -127,9 +132,12 @@ class AudioRecorder(QMainWindow):
             self.ax.autoscale_view()
             self.canvas.draw()
             # Check if window is closing while recording
+            '''
             if self.closing:
                 print("collapsed")
                 break
+            '''
+            
         self.save_recording(frames)
 
     def save_recording(self, frames):
@@ -152,9 +160,14 @@ class AudioRecorder(QMainWindow):
 
     def closeEvent(self, event):
         # Ignore the close event and hide the window
-        event.ignore()
+        """ event.ignore()
         self.hide()
-        self.closing = False
+        self.closing = False """
+        if self.recording:
+            event.ignore()
+            self.hide()
+        else:
+            event.accept()
 
 
 if __name__ == '__main__':
