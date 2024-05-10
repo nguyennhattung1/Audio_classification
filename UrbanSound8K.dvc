@@ -1,0 +1,6 @@
+outs:
+- md5: 17e674be86ed3188d1cb28ae225f51b2.dir
+  size: 7089554657
+  nfiles: 8748
+  hash: md5
+  path: UrbanSound8K
