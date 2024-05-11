@@ -142,7 +142,7 @@ class AudioRecorder(QMainWindow):
 
     def save_recording(self, frames):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
-        filename = f"output_{timestamp}.wav"
+        filename = f"output.wav"
         wf = wave.open(filename, "wb")
         wf.setnchannels(self.CHANNELS)
         wf.setsampwidth(self.audio.get_sample_size(self.FORMAT))

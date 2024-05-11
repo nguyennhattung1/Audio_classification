@@ -62,7 +62,8 @@ b5 = nn.Sequential(*resnet_block(256, 512, 2))
 net = nn.Sequential(b1, b2, b3, b4, b5,
                     nn.AdaptiveAvgPool2d((1,1)),
                     nn.Flatten(), nn.Linear(512, 10))
-net.load_state_dict(torch.load("net.pt"))
+
+net.load_state_dict(torch.load("net.pt", map_location=torch.device('cpu')))
 
 # # Path to the WAV file for prediction
 file_path = ["7061-6-0-0.wav","14386-9-0-6.wav","14386-9-0-11.wav"
